@@ -118,6 +118,13 @@ static struct nsproxy *create_new_namespaces(unsigned long flags,
         err = PTR_ERR(new_nsp->aa_ns);
         goto out_aa;
     }
+    if (flags & CLONE_NEWAA) {
+        int error = init_cred_namespace(tsk, new_nsp->aa_ns);
+        if (error < 0) {
+            printk(KERN_DEBUG "SYQ: apparmor new ns alloc cxt error");
+            goto out_aa;
+        }
+    }
 
 	return new_nsp;
 out_aa:

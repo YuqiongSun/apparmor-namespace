@@ -13,6 +13,9 @@
 #include <linux/slab.h>
 #include <linux/user_namespace.h>
 #include <linux/proc_ns.h>
+#include <linux/random.h>
+
+#define AA_NS_NAME_SIZE 13
 
 static struct apparmor_namespace *create_aa_ns(void)
 {
@@ -25,6 +28,7 @@ static struct apparmor_namespace *create_aa_ns(void)
    return aa_ns;
 }
 
+
 /**
  * Clone a new ns copying an original aa namespace, setting refcount to 1
  * @old_ns: old aa namespace to clone
@@ -36,6 +40,8 @@ static struct apparmor_namespace *clone_aa_ns(struct user_namespace *user_ns,
 {
    struct apparmor_namespace *ns;
    int err;
+   int random;
+   char aa_name[AA_NS_NAME_SIZE];    /*aa_namespace name will be in format %08xroot*/
 
    ns = create_aa_ns();
    if (!ns)
@@ -52,6 +58,19 @@ static struct apparmor_namespace *clone_aa_ns(struct user_namespace *user_ns,
    ns->parent = old_ns;
    ns->user_ns = get_user_ns(user_ns);
 
+    /*Create new aa_namespace*/
+    /*Each AppArmor namespace will create a new aa_namespace*/
+    get_random_bytes(&random, sizeof(random));
+    memset(aa_name, '\0', AA_NS_NAME_SIZE);
+    sprintf(aa_name, "%08xroot", random);
+    err = apparmor_alloc_namespace(ns, aa_name);
+    if (!err) {
+        kfree(ns);
+        return ERR_PTR(-ENOMEM);
+    }
+
+     
+    
    return ns;
 }
 

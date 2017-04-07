@@ -131,7 +131,7 @@ static void audit_pre(struct audit_buffer *ab, void *ca)
 
 	if (sa->aad->profile) {
 		struct aa_profile *profile = sa->aad->profile;
-		if (profile->ns != root_ns) {
+		if (profile->ns != init_apparmor_ns.root_ns) {
 			audit_log_format(ab, " namespace=");
 			audit_log_untrustedstring(ab, profile->ns->base.hname);
 		}

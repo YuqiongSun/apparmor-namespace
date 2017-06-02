@@ -950,7 +950,7 @@ static int __init aa_create_aafs(void)
 	if (error)
 		goto error;
 
-	error = __aa_fs_namespace_mkdir(root_ns, aa_fs_entry.dentry,
+	error = __aa_fs_namespace_mkdir(init_apparmor_ns.root_ns, aa_fs_entry.dentry,
 					"policy");
 	if (error)
 		goto error;

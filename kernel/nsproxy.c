@@ -128,8 +128,9 @@ static struct nsproxy *create_new_namespaces(unsigned long flags,
 
 	return new_nsp;
 out_aa:
-    if (new_nsp->aa_ns)
+    if (new_nsp->aa_ns) {
         put_aa_ns(new_nsp->aa_ns);
+    }
 out_net:
 	put_cgroup_ns(new_nsp->cgroup_ns);
 out_cgroup:

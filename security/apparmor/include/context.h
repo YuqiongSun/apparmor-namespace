@@ -73,6 +73,8 @@ struct aa_task_cxt {
 	struct aa_profile *onexec;
 	struct aa_profile *previous;
 	u64 token;
+    // SYQ
+    struct aa_task_cxt *parent;
 };
 
 struct aa_task_cxt *aa_alloc_task_context(gfp_t flags);

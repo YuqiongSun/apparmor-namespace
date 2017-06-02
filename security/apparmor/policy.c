@@ -90,7 +90,8 @@
 
 
 /* root profile namespace */
-struct aa_namespace *root_ns;
+// Seems like we will move it to per-namespace data struct
+// struct aa_namespace *root_ns;
 
 const char *const aa_profile_mode_names[] = {
 	"enforce",
@@ -414,6 +415,45 @@ out:
 }
 
 /**
+ * SYQ
+ * apparmor_alloc_namespace - allocate a base root aa_namespace for AppArmor
+ * namespace
+ * @ns: newly created AppArmor namespace
+ * @name: randomly generated name for aa_namespace
+ */
+int apparmor_alloc_namespace(struct apparmor_namespace *ns, const char*name)
+{
+    struct aa_namespace *root_ns;
+    root_ns = alloc_namespace(ns->parent->root_ns->base.hname, name);
+    if (!ns)
+        goto out;
+    root_ns->parent = ns->parent->root_ns; /*root ns of the namespace will be set to root ns of parent apparmor namespace*/
+    list_add_rcu(&root_ns->base.list, &ns->parent->root_ns->sub_ns);
+    aa_get_namespace(root_ns);
+    ns->root_ns = root_ns;
+    return 0;
+out:
+    printk(KERN_DEBUG "SYQ: Failed to create new aa_namespace %s\n", name);
+    return -1;
+}
+EXPORT_SYMBOL(apparmor_alloc_namespace);
+
+
+int init_cred_namespace(struct task_struct *tsk, struct apparmor_namespace *aa_ns) {
+
+    struct cred *cred = (struct cred *)tsk->cred;
+    struct aa_task_cxt *cxt;
+    cxt = aa_alloc_task_context(GFP_KERNEL);
+    if (!cxt)
+        return -ENOMEM;
+    cxt->profile = aa_get_profile(aa_ns->root_ns->unconfined);
+    cxt->parent = cred_cxt(cred);
+    cred_cxt(cred) = cxt;
+    return 0;
+}
+EXPORT_SYMBOL(init_cred_namespace);
+
+/**
  * __list_add_profile - add a profile to a list
  * @list: list to add it to  (NOT NULL)
  * @profile: the profile to add  (NOT NULL)
@@ -537,12 +577,14 @@ static void __ns_list_release(struct list_head *head)
  * Returns: %0 on success else error
  *
  */
-int __init aa_alloc_root_ns(void)
+int __init aa_alloc_root_ns(struct apparmor_namespace *aans)
 {
+    struct aa_namespace *root_ns;
 	/* released by aa_free_root_ns - used as list ref*/
 	root_ns = alloc_namespace(NULL, "root");
 	if (!root_ns)
 		return -ENOMEM;
+    aans->root_ns = root_ns;
 
 	return 0;
 }
@@ -550,13 +592,13 @@ int __init aa_alloc_root_ns(void)
  /**
   * aa_free_root_ns - free the root profile namespace
   */
-void __init aa_free_root_ns(void)
+void __init aa_free_root_ns(struct apparmor_namespace *aans)
  {
-	 struct aa_namespace *ns = root_ns;
-	 root_ns = NULL;
+	struct aa_namespace *ns = aans->root_ns;
 
-	 destroy_namespace(ns);
-	 aa_put_namespace(ns);
+	destroy_namespace(ns);
+	aa_put_namespace(ns);
+    aans->root_ns = NULL;
 }
 
 

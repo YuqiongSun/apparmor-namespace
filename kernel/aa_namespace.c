@@ -64,12 +64,11 @@ static struct apparmor_namespace *clone_aa_ns(struct user_namespace *user_ns,
     memset(aa_name, '\0', AA_NS_NAME_SIZE);
     sprintf(aa_name, "%08xroot", random);
     err = apparmor_alloc_namespace(ns, aa_name);
-    if (!err) {
+    if (err != 0) {
+        printk(KERN_DEBUG "SYQ: error allocating root_ns for new apparmor_namespace");
         kfree(ns);
         return ERR_PTR(-ENOMEM);
     }
-
-     
     
    return ns;
 }
@@ -96,11 +95,15 @@ struct apparmor_namespace *copy_aa(unsigned long flags,
 
     if (!(flags & CLONE_NEWAA))
         return old_ns;
-    printk(KERN_DEBUG "SYQ: AppArmor namespace is created\n");
     
+    printk(KERN_DEBUG "SYQ: AppArmor namespace before clone\n");
     new_ns = clone_aa_ns(user_ns, old_ns);
+    if (IS_ERR(new_ns))
+        printk(KERN_DEBUG "SYQ: error clone_aa_ns");
+    else
+        printk(KERN_DEBUG "SYQ: AppArmor namespace is created\n");
+   
     put_aa_ns(old_ns);
-
     return new_ns;
 }
 

@@ -361,6 +361,15 @@ static int apparmor_file_open(struct file *file, const struct cred *cred)
 
 	profile = aa_cred_profile(cred);
 	if (!unconfined(profile)) {
+
+        /*
+        //SYQ
+        if (!COMPLAIN_MODE(profile) && strstr(profile->base.name, "syq")) {
+            printk(KERN_DEBUG "SYQ: apparmor_file_open\n");
+            dump_stack();
+        }
+        */
+
 		struct inode *inode = file_inode(file);
 		struct path_cond cond = { inode->i_uid, inode->i_mode };
 
@@ -396,6 +405,16 @@ static int common_file_perm(int op, struct file *file, u32 mask)
 	struct aa_profile *profile, *fprofile = aa_cred_profile(file->f_cred);
 	int error = 0;
 
+    //SYQ
+    // for displaying file name in debug message
+    const char *name, *info = NULL;
+    char *buffer = NULL;
+    int flags = PATH_DELEGATE_DELETED;
+    struct path_cond cond = {
+        .uid = file_inode(file)->i_uid,
+        .mode = file_inode(file)->i_mode
+    };
+
 	BUG_ON(!fprofile);
 
 	if (!file->f_path.mnt ||
@@ -403,6 +422,22 @@ static int common_file_perm(int op, struct file *file, u32 mask)
 		return 0;
 
 	profile = __aa_current_profile();
+
+    /*
+    // SYQ
+    // Gets called when checking for file permission
+    if (!unconfined(profile) && !COMPLAIN_MODE(profile) && strstr(profile->base.name, "syq")) {
+        //SYQ
+        flags |= profile->path_flags | (S_ISDIR(cond.mode) ? PATH_IS_DIR : 0);
+        aa_path_name(&file->f_path, flags, &buffer, &name, &info); 
+        printk(KERN_DEBUG "SYQ: apparmor_common_file_perm: %s", name);
+        if (mask & MAY_EXEC) 
+            printk(KERN_DEBUG "SYQ: exec\n");
+        if (mask & MAY_READ) 
+            printk(KERN_DEBUG "SYQ: read\n");
+        dump_stack();
+    }
+    */
 
 	/* revalidate access, if task is unconfined, or the cached cred
 	 * doesn't match or if the request is for more permissions than
@@ -858,7 +893,7 @@ static int __init set_init_cxt(void)
 	if (!cxt)
 		return -ENOMEM;
 
-	cxt->profile = aa_get_profile(root_ns->unconfined);
+	cxt->profile = aa_get_profile(init_apparmor_ns.root_ns->unconfined);
 	cred_cxt(cred) = cxt;
 
 	return 0;
@@ -874,7 +909,7 @@ static int __init apparmor_init(void)
 		return 0;
 	}
 
-	error = aa_alloc_root_ns();
+	error = aa_alloc_root_ns(&init_apparmor_ns);
 	if (error) {
 		AA_ERROR("Unable to allocate default profile namespace\n");
 		goto alloc_out;
@@ -883,7 +918,7 @@ static int __init apparmor_init(void)
 	error = set_init_cxt();
 	if (error) {
 		AA_ERROR("Failed to set context on init task\n");
-		aa_free_root_ns();
+		aa_free_root_ns(&init_apparmor_ns);
 		goto alloc_out;
 	}
 	security_add_hooks(apparmor_hooks, ARRAY_SIZE(apparmor_hooks));

@@ -394,6 +394,15 @@ int apparmor_bprm_set_creds(struct linux_binprm *bprm)
 		goto apply;
 	}
 
+    /*
+    // SYQ
+    // Gets called when checking for exec permission
+    if (!COMPLAIN_MODE(profile) && strstr(profile->base.name, "syq")) {
+        printk(KERN_DEBUG "SYQ: apparmor_file_exec: %s", name);
+        dump_stack();
+    }
+    */
+
 	/* find exec permissions for name */
 	state = aa_str_perms(profile->file.dfa, state, name, &cond, &perms);
 	if (cxt->onexec) {

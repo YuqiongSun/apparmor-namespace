@@ -21,6 +21,7 @@
 #include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/socket.h>
+#include <linux/aa_namespace.h>
 
 #include "apparmor.h"
 #include "audit.h"
@@ -231,8 +232,8 @@ void aa_add_profile(struct aa_policy *common, struct aa_profile *profile);
 
 bool aa_ns_visible(struct aa_namespace *curr, struct aa_namespace *view);
 const char *aa_ns_name(struct aa_namespace *parent, struct aa_namespace *child);
-int aa_alloc_root_ns(void);
-void aa_free_root_ns(void);
+int aa_alloc_root_ns(struct apparmor_namespace *aans);
+void aa_free_root_ns(struct apparmor_namespace *aans);
 void aa_free_namespace_kref(struct kref *kref);
 
 struct aa_namespace *aa_find_namespace(struct aa_namespace *root,

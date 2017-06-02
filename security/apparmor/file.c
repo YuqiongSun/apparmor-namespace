@@ -149,7 +149,13 @@ int aa_audit_file(struct aa_profile *profile, struct file_perms *perms,
 		if (!sa.aad->fs.request)
 			return COMPLAIN_MODE(profile) ? 0 : sa.aad->error;
 	}
-
+    /*
+    // SYQ
+    if (!unconfined(profile) && strstr(profile->base.name, "syq")) {
+        printk(KERN_DEBUG "SYQ: denied mask is exec: %d", sa.aad->fs.request & MAY_EXEC);
+        dump_stack();
+    }
+    */
 	sa.aad->fs.denied = sa.aad->fs.request & ~perms->allow;
 	return aa_audit(type, profile, gfp, &sa, file_audit_cb);
 }
